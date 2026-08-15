@@ -116,3 +116,7 @@ refresh needed. Open the dashboard URL in one tab, submit the widget from
 
 See `EVIDENCE.md` for what's proven per checkbox and `BUILDLOG.md` for how AI
 was used at each phase.
+  
+## Dashboard  
+  
+![Dashboard screenshot](docs/dashboard-screenshot.png) 
