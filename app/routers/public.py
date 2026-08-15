@@ -7,6 +7,13 @@ from app.schemas import WidgetConfigOut
 
 router = APIRouter(tags=["public"])
 
+# Bumped on every real release of the bundle. A new value here means a new
+# URL (/widget/{version}.js), so browsers that cached the old immutable
+# bundle simply never see the new one until the customer re-pastes the
+# updated snippet — the standard "versioned bundle" cache-busting pattern.
+CURRENT_BUNDLE_VERSION = "v1"
+
+
 # Kept as a plain string bundle for the capstone — a real build step
 # (esbuild/rollup) would generate this; see the brief's stretch goals.
 _WIDGET_JS = """
@@ -99,12 +106,26 @@ _WIDGET_JS = """
 """
 
 
-@router.get("/widget.js")
-def get_widget_bundle():
+@router.get("/widget/{version}.js")
+def get_versioned_widget_bundle(version: str):
+    """The real embed target: /widget/v1.js. Immutable forever — a new
+    release ships as /widget/v2.js, never by mutating this URL's content."""
     return Response(
         content=_WIDGET_JS,
         media_type="application/javascript",
         headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
+
+
+@router.get("/widget.js")
+def get_widget_bundle():
+    """Convenience alias to the current version, kept short-cached so a
+    customer who pasted the unversioned URL still picks up releases —
+    version-pinned integrations should use /widget/{version}.js instead."""
+    return Response(
+        content=_WIDGET_JS,
+        media_type="application/javascript",
+        headers={"Cache-Control": "public, max-age=300"},
     )
 
 

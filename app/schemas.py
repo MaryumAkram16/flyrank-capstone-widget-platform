@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+
+from app.config import get_settings
 
 WidgetType = Literal["signup_form", "cta_popover"]
 
@@ -45,6 +47,12 @@ class WidgetOut(BaseModel):
     config_version: int
     bundle_version: str
     created_at: datetime
+
+    @computed_field
+    @property
+    def embed_snippet(self) -> str:
+        base = get_settings().public_base_url
+        return f'<script src="{base}/widget/{self.bundle_version}.js?id={self.id}"></script>'
 
 
 class WidgetConfigOut(BaseModel):

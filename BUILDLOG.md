@@ -26,3 +26,20 @@
 - Every claim below was run for real, not assumed: `pytest -q` (11 passed)
   and a live `uvicorn` + `curl` pass against a seeded widget (see
   `EVIDENCE.md` for the actual transcripts).
+
+## Phase 3 — Delivery, dashboard & proof
+- Used Claude to add versioned bundle delivery (`/widget/{version}.js`,
+  immutable cache, vs. a short-cached `/widget.js` alias), the computed
+  `embed_snippet` field on widget creation, and the multi-tenant isolation
+  test suite (`tests/test_isolation.py`).
+- Changed / caught: I asked specifically for a *real* two-origin proof, not
+  just unit tests — Claude ran the actual API on :8000 and the test-site on
+  :5500 as two separate processes and curl'd the whole chain (bundle → config
+  → submission → dashboard stats), which is what's pasted in `EVIDENCE.md`.
+  Unit tests alone (`test_full_second_origin_flow_config_then_submit`) mock
+  the origin header rather than running two real servers, so I wanted the
+  live version too before calling this checkbox done.
+- Where AI was wrong / needed correction: none this phase — the isolation
+  tests passed on the first run against the existing `get_for_tenant` /
+  `get_public` split from Phase 2, which was designed with this in mind.
+- `pytest -q` → 24 passed (11 from Phase 2 + 13 new: 7 isolation, 6 delivery).

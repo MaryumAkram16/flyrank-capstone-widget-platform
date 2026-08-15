@@ -10,8 +10,10 @@ Full design rationale: see [`DESIGN.md`](./DESIGN.md).
 
 - [x] Phase 1 — Design doc
 - [x] Phase 2 — Hardened submission path (validation, CORS, rate limiting,
-      honeypot, geo fallback chain, safe email side effect — 11/11 tests green)
-- [ ] Phase 3 — Delivery, dashboard & proof
+      honeypot, geo fallback chain, safe email side effect)
+- [x] Phase 3 — Delivery, dashboard & proof (versioned bundle, embed snippet,
+      multi-tenant isolation tests, live two-origin end-to-end run) — 24/24
+      tests green
 - [ ] Phase 4 — Demo prep
 
 ## Architecture
@@ -49,11 +51,42 @@ python -m app.seed
 uvicorn app.main:app --reload
 ```
 
-Open `test-site/index.html` (a separate local origin, e.g.
-`python -m http.server 5500` from `test-site/`) to see the widget render on a
-page the API doesn't serve.
+Note the widget id printed by the seed step — you'll need it for the test page below.
+
+Run the tests:
+
+```bash
+pytest -q
+```
+
+## Try the second-origin flow yourself
+
+```bash
+# terminal 1 (repo root, venv active)
+uvicorn app.main:app --reload
+
+# terminal 2
+cd test-site
+python -m http.server 5500
+```
+
+Open `test-site/index.html` in the URL it prints, after replacing
+`PASTE_WIDGET_ID_HERE` in that file with the id the seed step printed. The
+widget renders on a page served entirely from a different port than the API —
+inspect the network tab to see the cross-origin config fetch and submission.
 
 ## Limitations
 
-Documented honestly as each phase lands — see `EVIDENCE.md` for what's proven
-and `BUILDLOG.md` for how AI was used.
+- Rate limiting is in-process/in-memory — correct for this single-instance
+  capstone (proven by `test_burst_triggers_429_then_service_recovers`), but a
+  multi-instance deployment would need a shared store (Redis) instead.
+- API-key auth only, no session/JWT login flow — sufficient for the brief's
+  "authenticated admin API" requirement, not meant as a production auth system.
+- Password hashing is a plain SHA-256, not bcrypt/argon2 — fine for a local
+  demo, not something to ship.
+- Geo enrichment providers are called live in dev; tests use the
+  `FORCE_DOWN_A`/`FORCE_DOWN_B` toggles in `app/services/geo.py` for
+  deterministic fallback testing, per the brief's §3 constraint.
+
+See `EVIDENCE.md` for what's proven per checkbox and `BUILDLOG.md` for how AI
+was used at each phase.

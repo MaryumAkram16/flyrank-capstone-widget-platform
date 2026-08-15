@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     geo_provider_b_url: str = "https://ipapi.co"
     rate_limit_per_minute: int = 20
     smtp_enabled: bool = False
+    public_base_url: str = "http://localhost:8000"
 
     @property
     def allowed_origins_list(self) -> list[str]:

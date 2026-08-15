@@ -57,7 +57,7 @@
       `test_failing_email_side_effect_does_not_block_submission`
       (`notify.FORCE_FAIL = True` → still 201, still stored).
 
-## Widget delivery (partial — Phase 3 will extend)
+## Widget delivery
 - [x] Config endpoint returns correct cache headers:
   ```
   $ curl -s http://localhost:8000/widgets/<id>/config -i
@@ -65,31 +65,49 @@
   cache-control: public, max-age=60
   access-control-allow-origin: *
   ```
-- [x] Widget JS served as a versioned/cacheable bundle:
+- [x] Widget JS served as a versioned bundle — `/widget/v1.js` (immutable,
+      1-year cache; a real release bumps `CURRENT_BUNDLE_VERSION` in
+      `app/routers/public.py` to `v2`, which is a new URL, never mutated
+      content at the old one). `/widget.js` stays as a short-cached
+      (`max-age=300`) alias for unversioned embeds:
   ```
-  $ curl -s http://localhost:8000/widget.js -i
+  $ curl -s http://localhost:8000/widget/v1.js -i
   HTTP/1.1 200 OK
   cache-control: public, max-age=31536000, immutable
   content-type: application/javascript
   ```
-- [ ] Widget renders on a second-origin page — scaffolded in `test-site/index.html`,
-      manual verification pending Phase 3.
+- [x] Widget renders on a second-origin page — real two-process run: API on
+      `:8000`, `test-site/` served via `python -m http.server 5500`. Full
+      cross-origin chain proven live (see transcript below) and covered by
+      `tests/test_delivery.py::test_full_second_origin_flow_config_then_submit`:
+  ```
+  1. GET  http://localhost:8000/widget/v1.js                         -> 200
+  2. GET  http://localhost:8000/widgets/<id>/config  (Origin :5500)   -> 200,
+     access-control-allow-origin: http://localhost:5500
+  3. POST http://localhost:8000/submissions          (Origin :5500)   -> 201,
+     access-control-allow-origin: http://localhost:5500
+  4. GET  http://localhost:8000/api/dashboard/widgets/<id>/stats (X-API-Key) ->
+     {"widget_id":"<id>","total":1,"spam_blocked":0,"with_geo":0,
+      "last_7_days":{"2026-08-15":1}}
+  ```
 
 ## Widget management
 - [x] Authenticated CRUD; unauthenticated requests rejected — `POST /api/widgets`
-      requires `X-API-Key`; missing/invalid key → 401 (exercised via
-      `tenant_and_key`/`widget` fixtures in every test; see auth.py + widgets.py).
-- [ ] Multi-tenant isolation explicit test — implemented (`get_for_tenant` scopes
-      every owner query by `tenant_id`) but no dedicated cross-tenant test yet —
-      pending Phase 3.
+      requires `X-API-Key`; missing/invalid key → 401. Covered by
+      `test_missing_api_key_is_rejected`, `test_invalid_api_key_is_rejected`.
+- [x] Multi-tenant isolation proven — `tests/test_isolation.py`, six tests:
+      tenant A can't read, edit, or delete tenant B's widget (all 404, not a
+      403 that would leak existence); tenant A's widget list never contains
+      tenant B's widgets; tenant A's dashboard stats/submissions calls against
+      tenant B's widget id are 404; tenant B still sees their own data intact
+      throughout.
 
 ## Tests & docs
 - [x] Automated tests cover CORS, invalid payload, oversized payload, rate
-      limiting, spam control, and provider fallback:
+      limiting, spam control, provider fallback, and tenant isolation:
   ```
   $ pytest -q
-  ...........                                                            [100%]
-  11 passed in 0.55s
+  ........................                                               [100%]
+  24 passed in 1.00s
   ```
-- [ ] README architecture diagram — present (ASCII); full setup walkthrough
-      pending Phase 3 polish.
+- [x] README architecture diagram + setup instructions present.
