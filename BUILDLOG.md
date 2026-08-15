@@ -43,3 +43,22 @@
   tests passed on the first run against the existing `get_for_tenant` /
   `get_public` split from Phase 2, which was designed with this in mind.
 - `pytest -q` → 24 passed (11 from Phase 2 + 13 new: 7 isolation, 6 delivery).
+
+## Phase 4 — Demo prep
+- Used Claude to write `DEMO.md` (the 7-beat script from §13, timed) and add
+  a `/demo/*` toggle router so Probes 4/5's "disable this dependency live"
+  can happen against a running server instead of requiring a restart.
+- Where AI was wrong / needed correction: the first rehearsal exposed a real
+  ordering bug I hadn't caught — beat 4's rate-limit burst test exhausted the
+  widget's rate-limit bucket, so beats 5 and 6 right after it both returned
+  false 429s instead of demonstrating what they were supposed to. Fixed by
+  making `/demo/reset` also clear rate-limit counters, and by calling it
+  between beats in the script. Re-ran the full rehearsal after the fix to
+  confirm beats 5 and 6 actually show what they claim.
+- One honest gap, not hidden: the live rehearsal's geo fallback beat shows
+  `geo_country: null` because this build environment's network policy blocks
+  ip-api.com/ipapi.co outbound — the fallback *logic* is proven (mocked unit
+  test), but real geo data from beat 5 needs a one-time check on a machine
+  with normal internet access before the actual demo. Noted in `DEMO.md` and
+  `EVIDENCE.md` rather than claimed as verified.
+- `pytest -q` → 27 passed (24 from Phase 3 + 3 new demo-toggle tests).

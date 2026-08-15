@@ -14,7 +14,8 @@ Full design rationale: see [`DESIGN.md`](./DESIGN.md).
 - [x] Phase 3 — Delivery, dashboard & proof (versioned bundle, embed snippet,
       multi-tenant isolation tests, live two-origin end-to-end run) — 24/24
       tests green
-- [ ] Phase 4 — Demo prep
+- [x] Phase 4 — Demo prep (rehearsed script in `DEMO.md`, `/demo/*` toggle
+      endpoints so probes 4/5 can be triggered live without a restart)
 
 ## Architecture
 

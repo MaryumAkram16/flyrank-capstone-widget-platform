@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from app import models  # noqa: F401 - registers models on Base before create_all
 from app.config import get_settings
 from app.database import Base, engine
-from app.routers import auth, dashboard, public, submissions, widgets
+from app.routers import auth, dashboard, demo, public, submissions, widgets
 
 settings = get_settings()
 
@@ -47,6 +47,7 @@ app.include_router(widgets.router)
 app.include_router(public.router)
 app.include_router(submissions.router)
 app.include_router(dashboard.router)
+app.include_router(demo.router)
 
 
 @app.get("/health")

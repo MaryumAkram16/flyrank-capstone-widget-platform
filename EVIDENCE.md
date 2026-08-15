@@ -111,3 +111,28 @@
   24 passed in 1.00s
   ```
 - [x] README architecture diagram + setup instructions present.
+
+## Phase 4 — Demo rehearsal (live transcript)
+
+Ran the full `DEMO.md` script against a real running server. All beats
+matched expectations except one flagged limitation:
+
+```
+BEAT 1: embed_snippet -> <script src="http://localhost:8000/widget/v1.js?id=..."></script>
+BEAT 4a: invalid payload -> 400
+BEAT 4b: disallowed origin preflight -> 400, no access-control-allow-origin echoed
+BEAT 4c: burst of 22 -> last status 429; /demo/reset clears it before the next beat
+BEAT 5: provider A forced down -> submission still 201 (geo_country: null in
+        this sandbox -- see the warning note in DEMO.md: outbound calls to
+        ip-api.com/ipapi.co are blocked by this sandbox's network policy, so
+        only the fallback *logic* was proven here, via the mocked test; real
+        geo data needs a one-time check on an unrestricted machine)
+BEAT 6: email side effect forced to fail -> submission still 201
+BEAT 7: dashboard stats reflect every submission from beats 3-6
+```
+
+Added a `/demo/*` control router (geo-provider-a/b toggle, email side-effect
+toggle, reset) specifically because Probes 4 and 5 ask an evaluator to
+"disable" a live dependency -- without it, that was only possible by editing
+Python globals and restarting the server, which isn't demo-safe. Test suite
+now at 27/27 (`tests/test_demo_toggles.py` added).

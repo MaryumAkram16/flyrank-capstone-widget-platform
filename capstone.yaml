@@ -6,6 +6,10 @@ endpoints:
   - POST /api/widgets
   - GET /api/widgets
   - GET /widgets/{id}/config
-  - GET /widget.js
+  - GET /widget/{version}.js
   - POST /submissions
   - GET /api/dashboard/widgets/{id}/stats
+  - POST /demo/geo-provider-a/{state}
+  - POST /demo/geo-provider-b/{state}
+  - POST /demo/email-side-effect/{state}
+  - POST /demo/reset
