@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Customer site (second origin) — widget test page</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; }
+    .fr-widget { border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+    .fr-widget label { display: block; margin: 10px 0; }
+    .fr-widget input, .fr-widget textarea { width: 100%; padding: 6px; margin-top: 4px; }
+    .fr-widget button { margin-top: 10px; padding: 8px 16px; }
+  </style>
+</head>
+<body>
+  <h1>This is not your API's origin</h1>
+  <p>
+    Served from a different local port than the FastAPI app — the widget below
+    is loaded, configured, and submitted entirely cross-origin, exactly like a
+    real customer site would.
+  </p>
+
+  <!--
+    Run the API on :8000, seed it (`python -m app.seed`), copy the printed
+    "Signup form widget id" and paste it below, then serve this file from a
+    different port, e.g.: `python -m http.server 5500` from test-site/.
+  -->
+  <script src="http://localhost:8000/widget.js?id=PASTE_WIDGET_ID_HERE"></script>
+</body>
+</html>

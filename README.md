@@ -9,7 +9,8 @@ Full design rationale: see [`DESIGN.md`](./DESIGN.md).
 ## Status
 
 - [x] Phase 1 — Design doc
-- [ ] Phase 2 — Hardened submission path (in progress)
+- [x] Phase 2 — Hardened submission path (validation, CORS, rate limiting,
+      honeypot, geo fallback chain, safe email side effect — 11/11 tests green)
 - [ ] Phase 3 — Delivery, dashboard & proof
 - [ ] Phase 4 — Demo prep
 
