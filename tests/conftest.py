@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from app import models  # noqa: F401
 from app.database import Base, get_db
 from app.main import app
+from app.services import events as events_service
 from app.services import geo as geo_service
 from app.services import notify
 from app.services.rate_limit import reset as reset_rate_limits
@@ -24,6 +25,7 @@ def _fresh_db_and_toggles():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     reset_rate_limits()
+    events_service.reset()
     geo_service.FORCE_DOWN_A = False
     geo_service.FORCE_DOWN_B = False
     notify.FORCE_FAIL = False

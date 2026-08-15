@@ -156,3 +156,52 @@ reviewed (stats row + submissions table render correctly with real seeded +
 submitted data). Covered by `tests/test_dashboard_view.py` (5 tests: key
 required, invalid key rejected, stats+table render, XSS escaping, other
 tenant's key gets 404, empty state). Suite now 32/32.
+
+## Stretch — real-time SSE dashboard
+
+Not required by §6, listed as a stretch goal in §9 ("new submissions appear
+live via WebSockets or Server-Sent Events"). Server-Sent Events chosen over
+WebSockets since the feed is one-directional (server -> browser only).
+
+Unit-tested: the pub/sub broker itself (`app/services/events.py`) and the
+exact wiring point — `tests/test_live_stream.py` confirms submissions.py
+calls `events.publish()` with the right payload for real submissions, and
+does NOT call it for spam (a bot's submission shouldn't animate a phantom
+row into the live view), and that a broadcast failure never breaks the
+submission response (same "never blocks the main path" rule as email/geo).
+
+Real proof — genuinely live, two separate OS processes (not an in-process
+test double):
+```
+$ curl -N -s "http://localhost:8000/api/dashboard/widgets/<id>/stream?key=<key>" > stream_output.txt &
+$ curl -s -X POST http://localhost:8000/submissions -H "Content-Type: application/json" \
+    -d '{"widget_id":"<id>","data":{"email":"live-proof@example.com"}}'
+{"id":"0791fe78-...","widget_id":"<id>","data":{"email":"live-proof@example.com"},...}
+
+$ cat stream_output.txt
+event: connected
+data: {}
+
+event: submission
+data: {"id": "0791fe78-...", "data": {"email": "live-proof@example.com"}, "geo_country": null, "geo_city": null, "created_at": "2026-08-15T14:51:12.261957"}
+```
+The submission id and data in the stream exactly match the POST response —
+confirmed live, not simulated.
+
+Also fetched the actual `/view` HTML and confirmed the embedded `EventSource`
+client points at the correct `/stream?key=...` URL with the widget id and
+API key correctly JSON-encoded (not string-concatenated — avoids breaking on
+a key/id containing a quote character), and that submission data client-side
+uses `textContent`, never `innerHTML`, for the same stored-XSS reason as the
+server-rendered rows.
+
+**Honest limitation, not hidden**: this couldn't be proven with an in-process
+pytest test using `httpx.AsyncClient`/`TestClient` — httpx 0.27.x's
+`ASGITransport` fully drains a streaming response internally before
+returning control to the caller, which deadlocks against a generator that
+only terminates on client disconnect. Confirmed by hand (see BUILDLOG.md for
+the debugging trail). This is a test-harness limitation, not an application
+bug — real browsers and curl stream incrementally over a real socket and
+don't hit it, which is exactly what the two-process proof above demonstrates.
+
+Suite now 41/41.

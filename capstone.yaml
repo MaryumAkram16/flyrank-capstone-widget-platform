@@ -9,6 +9,8 @@ endpoints:
   - GET /widget/{version}.js
   - POST /submissions
   - GET /api/dashboard/widgets/{id}/stats
+  - GET /api/dashboard/widgets/{id}/view
+  - GET /api/dashboard/widgets/{id}/stream
   - POST /demo/geo-provider-a/{state}
   - POST /demo/geo-provider-b/{state}
   - POST /demo/email-side-effect/{state}

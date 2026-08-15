@@ -87,6 +87,10 @@ HTML-escaped before rendering (a visitor's form input is untrusted, so this
 is the one place a stored-XSS bug could live — see
 `tests/test_dashboard_view.py::test_dashboard_view_escapes_submission_data`).
 
+New submissions appear on this page live, via Server-Sent Events — no
+refresh needed. Open the dashboard URL in one tab, submit the widget from
+`test-site/index.html` in another, and watch the row animate in.
+
 ## Limitations
 
 - Rate limiting is in-process/in-memory — correct for this single-instance

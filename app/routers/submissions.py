@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.repositories import submissions_repo, widgets_repo
 from app.schemas import SubmissionCreate, SubmissionOut
+from app.services import events as events_service
 from app.services import geo as geo_service
 from app.services import notify
 from app.services.rate_limit import is_rate_limited
@@ -95,5 +96,20 @@ async def create_submission(request: Request, db: Session = Depends(get_db)):
             submission.email_sent = True
             db.commit()
             db.refresh(submission)
+
+        # --- 8. live dashboard broadcast — best effort, same "never blocks" rule
+        try:
+            await events_service.publish(
+                widget.id,
+                {
+                    "id": submission.id,
+                    "data": submission.data,
+                    "geo_country": submission.geo_country,
+                    "geo_city": submission.geo_city,
+                    "created_at": submission.created_at.isoformat(),
+                },
+            )
+        except Exception as exc:  # noqa: BLE001 - a broadcast failure must never fail the request
+            logger.warning("live dashboard broadcast failed, submission still stored: %s", exc)
 
     return submission

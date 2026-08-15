@@ -75,3 +75,27 @@
 - Where AI was wrong / needed correction: none — this one was scoped
   correctly on the first pass.
 - `pytest -q` -> 32 passed (27 from Phase 4 + 5 new).
+
+## Stretch — real-time SSE dashboard
+- Used Claude to build an in-process pub/sub broker (`app/services/events.py`),
+  wire a `publish()` call into the submission path (non-spam only), add an
+  SSE endpoint (`/api/dashboard/widgets/{id}/stream`), and extend the
+  dashboard HTML with a vanilla-JS `EventSource` client — no frontend
+  framework, consistent with the rest of the capstone.
+- Where AI was wrong / needed real correction, twice in a row on the same
+  issue: the first two attempts at testing this in-process both hung
+  indefinitely. First with `TestClient`'s sync `.stream()` (deadlocks because
+  it fully drains the response before returning). Second with
+  `httpx.AsyncClient` + `ASGITransport` directly, on the theory that going
+  fully async would fix it — it did not; the same httpx version's
+  `ASGITransport` has the same full-drain behavior regardless of sync vs.
+  async client. Confirmed with a minimal standalone reproduction script
+  outside pytest before concluding it was a real library limitation and not
+  a bug in the app or the test. Pivoted the test suite to unit-test the
+  broker and the exact wiring point (does submissions.py call publish() with
+  the right payload, and does it skip spam) via monkeypatching, and did the
+  actual "open a stream, post a submission, watch it arrive live" proof
+  against a real running server using two real `curl` processes instead —
+  which is a stronger proof than an in-process mock would have been anyway.
+- `pytest -q` -> 41 passed (32 from the dashboard-table stretch + 9 new:
+  4 broker unit tests, 2 auth/ownership checks, 3 wiring tests).
