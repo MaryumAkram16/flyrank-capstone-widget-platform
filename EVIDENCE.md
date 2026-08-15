@@ -253,3 +253,15 @@ JS, in Python), rather than adding a bypass for tests. The burst/rate-limit
 test uses a structurally-valid-but-wrong challenge deliberately, since rate
 limiting runs before challenge verification in the pipeline and the test
 doesn't need 25 real solves to prove its point.
+
+## Update — geo provider fallback confirmed live
+
+The earlier note above (Phase 4 rehearsal) flagged that real geo data from
+the provider-fallback beat was unverified in the build sandbox due to a
+network restriction. Confirmed for real on the actual deployment machine:
+```n$ curl -X POST http://localhost:8000/demo/geo-provider-a/down
+$ Invoke-RestMethod ... -Headers @{ "X-Forwarded-For" = "8.8.8.8" }
+geo_country : United States
+geo_city    : Mountain View
+```nProvider A was forced down; provider B answered correctly. The fallback
+chain works with real data, not just the mocked unit test.

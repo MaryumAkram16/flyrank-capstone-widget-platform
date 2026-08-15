@@ -194,3 +194,10 @@ changing from populated to still-populated-via-B, versus an email failure
 that's invisible unless you're staring at a log line. Both are wired and
 tested either way (`/demo/*` toggles both), so you can swap which one you
 narrate live without any extra prep.
+
+## Update
+
+The unverified-in-sandbox warning on Beat 5 has been confirmed live: provider
+A forced down, provider B correctly returned United States / Mountain View
+for a request tagged with X-Forwarded-For: 8.8.8.8. Full transcript in
+EVIDENCE.md.
