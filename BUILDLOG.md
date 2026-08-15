@@ -62,3 +62,16 @@
   with normal internet access before the actual demo. Noted in `DEMO.md` and
   `EVIDENCE.md` rather than claimed as verified.
 - `pytest -q` → 27 passed (24 from Phase 3 + 3 new demo-toggle tests).
+
+## Stretch — minimal HTML dashboard view
+- Used Claude to add a server-rendered `/api/dashboard/widgets/{id}/view`
+  route — plain HTML/CSS in an f-string, no frontend build, per §7's own
+  guidance ("the grade lives in the backend, not the CSS").
+- Specifically asked for HTML-escaping on all submission data before it
+  renders, since a visitor's form input is untrusted and this is the one
+  surface where it gets turned into HTML — added a test that actually
+  submits a `<script>alert(1)</script>` payload through the real public
+  endpoint and confirms it renders as escaped text, not executable markup.
+- Where AI was wrong / needed correction: none — this one was scoped
+  correctly on the first pass.
+- `pytest -q` -> 32 passed (27 from Phase 4 + 5 new).

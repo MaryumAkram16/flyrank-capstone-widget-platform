@@ -132,6 +132,14 @@ curl -s http://localhost:8000/api/dashboard/widgets/$WID/stats -H "X-API-Key: $K
 Total submissions, spam blocked, geo coverage — everything the visitor
 triggered across beats 3–6, in one view.
 
+Or, more demo-friendly (no JSON on screen): open this URL directly in a
+browser tab —
+```
+http://localhost:8000/api/dashboard/widgets/{WID}/view?key={KEY}
+```
+— a plain server-rendered table with the same stats plus every submission's
+fields and geo location.
+
 ---
 
 ## Why this failure (provider fallback) over the others

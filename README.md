@@ -76,6 +76,17 @@ Open `test-site/index.html` in the URL it prints, after replacing
 widget renders on a page served entirely from a different port than the API —
 inspect the network tab to see the cross-origin config fetch and submission.
 
+## Owner dashboard (plain HTML, no build step)
+
+```
+http://localhost:8000/api/dashboard/widgets/{widget_id}/view?key={api_key}
+```
+
+Server-rendered submissions table with basic stats. All submission data is
+HTML-escaped before rendering (a visitor's form input is untrusted, so this
+is the one place a stored-XSS bug could live — see
+`tests/test_dashboard_view.py::test_dashboard_view_escapes_submission_data`).
+
 ## Limitations
 
 - Rate limiting is in-process/in-memory — correct for this single-instance

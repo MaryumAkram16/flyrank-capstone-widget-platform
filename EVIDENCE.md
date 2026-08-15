@@ -136,3 +136,23 @@ toggle, reset) specifically because Probes 4 and 5 ask an evaluator to
 "disable" a live dependency -- without it, that was only possible by editing
 Python globals and restarting the server, which isn't demo-safe. Test suite
 now at 27/27 (`tests/test_demo_toggles.py` added).
+
+## Stretch — minimal HTML dashboard view
+
+Not required by §6, added as polish. Server-rendered, no frontend build.
+Live-generated and inspected (not just unit-tested):
+
+```
+$ curl -s "http://localhost:8000/api/dashboard/widgets/<id>/view?key=<key>" -o preview.html
+$ curl -s -o /dev/null -w "%{http_code}\n" ".../view?key=<key>"
+200
+$ grep alert preview.html
+<td>&lt;script&gt;alert(1)&lt;/script&gt;</td>
+```
+
+Confirms a real stored-XSS attempt via the public submission endpoint renders
+escaped, not executable, in the owner's dashboard. Full HTML output visually
+reviewed (stats row + submissions table render correctly with real seeded +
+submitted data). Covered by `tests/test_dashboard_view.py` (5 tests: key
+required, invalid key rejected, stats+table render, XSS escaping, other
+tenant's key gets 404, empty state). Suite now 32/32.
