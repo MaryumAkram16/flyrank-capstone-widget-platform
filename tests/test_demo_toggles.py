@@ -1,5 +1,6 @@
 from app.services import geo as geo_service
 from app.services import notify
+from conftest import solve_pow_challenge
 
 
 def test_toggle_provider_a_down_and_up(client):
@@ -19,7 +20,11 @@ def test_toggle_email_side_effect_and_submission_still_succeeds(client, widget):
 
     resp = client.post(
         "/submissions",
-        json={"widget_id": widget["id"], "data": {"email": "a@example.com"}},
+        json={
+            "widget_id": widget["id"],
+            "data": {"email": "a@example.com"},
+            **solve_pow_challenge(client, widget["id"]),
+        },
     )
     assert resp.status_code == 201  # side effect fails, submission still succeeds
 

@@ -70,6 +70,12 @@ class WidgetConfigOut(BaseModel):
     config_version: int
 
 
+class ChallengeOut(BaseModel):
+    challenge_id: str
+    salt: str
+    difficulty: int
+
+
 # --- Submissions -------------------------------------------------------------
 
 # Hard caps so a malicious payload can't blow up the request body or the JSON column.
@@ -83,6 +89,11 @@ class SubmissionCreate(BaseModel):
     # Honeypot: real visitors never fill this (it's hidden via CSS in the widget).
     # A bot filling every field will fill this too.
     website: str = Field(default="", max_length=200)
+    # Proof-of-work bot defense — required. A submission with no challenge_id
+    # (or one that doesn't solve) never reaches the honeypot/enrichment/store
+    # pipeline at all — see routers/submissions.py.
+    challenge_id: str = Field(min_length=1, max_length=64)
+    solution: str = Field(min_length=1, max_length=64)
 
     @field_validator("data")
     @classmethod

@@ -10,6 +10,7 @@ from app.schemas import SubmissionCreate, SubmissionOut
 from app.services import events as events_service
 from app.services import geo as geo_service
 from app.services import notify
+from app.services import pow as pow_service
 from app.services.rate_limit import is_rate_limited
 from app.services.spam import is_spam
 
@@ -65,10 +66,18 @@ async def create_submission(request: Request, db: Session = Depends(get_db)):
             detail={"error": "widget_not_found"},
         )
 
-    # --- 4. spam control (honeypot) -------------------------------------------
+    # --- 4. bot defense — proof-of-work challenge must be solved -----------
+    ok, reason = pow_service.verify_and_consume(payload.challenge_id, widget.id, payload.solution)
+    if not ok:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": "bot_challenge_failed", "reason": reason},
+        )
+
+    # --- 5. spam control (honeypot) -------------------------------------------
     spam = is_spam(payload.website)
 
-    # --- 5. enrichment — provider A -> provider B -> none, never blocks storage
+    # --- 6. enrichment — provider A -> provider B -> none, never blocks storage
     geo_result = None
     if not spam:
         try:
@@ -77,7 +86,7 @@ async def create_submission(request: Request, db: Session = Depends(get_db)):
             logger.warning("geo enrichment raised unexpectedly, continuing without geo: %s", exc)
             geo_result = None
 
-    # --- 6. store — this is the line that must succeed no matter what above it did
+    # --- 7. store — this is the line that must succeed no matter what above it did
     submission = submissions_repo.create(
         db,
         widget=widget,
@@ -88,7 +97,7 @@ async def create_submission(request: Request, db: Session = Depends(get_db)):
         email_sent=False,
     )
 
-    # --- 7. safe side effect — best effort, failure never undoes the 201 -------
+    # --- 8. safe side effect — best effort, failure never undoes the 201 -------
     if not spam:
         contact_hint = payload.data.get("email", "")
         sent = notify.send_confirmation(contact_hint, widget.title)
@@ -97,7 +106,7 @@ async def create_submission(request: Request, db: Session = Depends(get_db)):
             db.commit()
             db.refresh(submission)
 
-        # --- 8. live dashboard broadcast — best effort, same "never blocks" rule
+        # --- 9. live dashboard broadcast — best effort, same "never blocks" rule
         try:
             await events_service.publish(
                 widget.id,

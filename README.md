@@ -17,6 +17,16 @@ Full design rationale: see [`DESIGN.md`](./DESIGN.md).
 - [x] Phase 4 — Demo prep (rehearsed script in `DEMO.md`, `/demo/*` toggle
       endpoints so probes 4/5 can be triggered live without a restart)
 
+## Stretch goals (§9)
+
+- [x] Minimal HTML dashboard view — server-rendered, no build step, XSS-escaped
+- [x] Real-time dashboard — new submissions appear live via Server-Sent Events
+- [x] Bot defense — proof-of-work challenge, measured spam reduction (see
+      `EVIDENCE.md`): naive bots 100% blocked, legitimate visitors 0% false
+      positives, ~117ms average solve cost per real submission
+
+Suite is at 47/47 (`pytest -q`).
+
 ## Architecture
 
 ```

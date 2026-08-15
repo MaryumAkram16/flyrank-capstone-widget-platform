@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 20
     smtp_enabled: bool = False
     public_base_url: str = "http://localhost:8000"
+    pow_difficulty: int = 4  # required leading zero hex chars — ~65k avg tries
 
     @property
     def allowed_origins_list(self) -> list[str]:

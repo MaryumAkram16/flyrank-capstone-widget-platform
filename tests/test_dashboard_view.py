@@ -1,3 +1,6 @@
+from conftest import solve_pow_challenge
+
+
 def test_dashboard_view_requires_valid_key(client, widget):
     resp = client.get(f"/api/dashboard/widgets/{widget['id']}/view")
     assert resp.status_code == 422  # key is a required query param
@@ -9,7 +12,12 @@ def test_dashboard_view_requires_valid_key(client, widget):
 def test_dashboard_view_renders_stats_and_table(client, tenant_and_key, widget):
     client.post(
         "/submissions",
-        json={"widget_id": widget["id"], "data": {"email": "visitor@example.com"}, "website": ""},
+        json={
+            "widget_id": widget["id"],
+            "data": {"email": "visitor@example.com"},
+            "website": "",
+            **solve_pow_challenge(client, widget["id"]),
+        },
     )
 
     resp = client.get(
@@ -29,7 +37,12 @@ def test_dashboard_view_escapes_submission_data(client, tenant_and_key, widget):
     payload_attempt = "<script>alert(1)</script>"
     client.post(
         "/submissions",
-        json={"widget_id": widget["id"], "data": {"email": payload_attempt}, "website": ""},
+        json={
+            "widget_id": widget["id"],
+            "data": {"email": payload_attempt},
+            "website": "",
+            **solve_pow_challenge(client, widget["id"]),
+        },
     )
 
     resp = client.get(

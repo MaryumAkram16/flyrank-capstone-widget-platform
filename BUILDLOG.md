@@ -99,3 +99,40 @@
   which is a stronger proof than an in-process mock would have been anyway.
 - `pytest -q` -> 41 passed (32 from the dashboard-table stretch + 9 new:
   4 broker unit tests, 2 auth/ownership checks, 3 wiring tests).
+
+## Stretch — bot defense (proof-of-work) with measured spam reduction
+- Used Claude to build the full feature: `app/services/pow.py` (challenge
+  issue/verify), a new `GET /widgets/{id}/challenge` endpoint, required
+  `challenge_id`/`solution` fields on every submission, and a client-side
+  solver in the widget bundle using Web Crypto's `crypto.subtle.digest`.
+- This was the most invasive stretch goal — making the challenge fields
+  *required* (not optional/best-effort) meant every one of the 41 existing
+  tests that posted to `/submissions` needed updating, not just new tests
+  added. Went through each test file and either had it solve a real
+  challenge (via a new `solve_pow_challenge()` helper that runs the same
+  brute-force algorithm as the browser JS, in Python) or, for the
+  rate-limit burst test specifically, used a structurally-valid-but-wrong
+  challenge since rate limiting runs before challenge verification in the
+  pipeline and doesn't need 25 real solves to prove the point.
+- Specifically asked for the §9 line to be taken literally — "measure the
+  spam reduction" wants a number, not just the mechanism — so built
+  `scripts/measure_bot_defense.py` and ran it against a real live server
+  rather than describing the mechanism and calling it done.
+- Where AI was wrong / needed correction: the first version of the
+  measurement script ran all three profiles (naive bot, scripted attacker,
+  legitimate visitor) back-to-back against the same widget without
+  resetting rate limits between them — 60 total requests against a
+  20/minute limit would have had the rate limiter itself block most of the
+  later profiles, producing a misleading "100% blocked" number that wasn't
+  actually about bot defense. Caught before running it for real by
+  reasoning through the numbers first; fixed by calling the existing
+  `/demo/reset` endpoint (which already clears rate limits, from the Phase 4
+  toggle router) between each profile so the measurement isolates the
+  proof-of-work layer specifically.
+- Real numbers, not estimated: naive bot 0/20 (100% blocked), scripted
+  attacker 0/20 (100% blocked), legitimate visitor 20/20 (0% false
+  positives, ~117ms average solve cost). See EVIDENCE.md for the full
+  transcript.
+- `pytest -q` -> 47 passed (41 from the SSE stretch + 6 new: 2 challenge
+  endpoint tests, 4 bot-defense tests — the rest of the increase is from
+  extending existing tests, not just adding new ones).

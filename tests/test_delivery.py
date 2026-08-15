@@ -1,3 +1,6 @@
+from conftest import solve_pow_challenge
+
+
 def test_widget_creation_returns_embed_snippet(client, tenant_and_key):
     resp = client.post(
         "/api/widgets",
@@ -63,6 +66,7 @@ def test_full_second_origin_flow_config_then_submit(client, widget):
             "widget_id": widget["id"],
             "data": {"email": "visitor@example.com"},
             "website": "",  # honeypot left empty by a real visitor
+            **solve_pow_challenge(client, widget["id"]),
         },
     )
     assert submit_resp.status_code == 201

@@ -1,3 +1,4 @@
+import hashlib
 import os
 
 os.environ["DATABASE_URL"] = "sqlite:///./test_widgets.db"
@@ -13,6 +14,7 @@ from app.main import app
 from app.services import events as events_service
 from app.services import geo as geo_service
 from app.services import notify
+from app.services import pow as pow_service
 from app.services.rate_limit import reset as reset_rate_limits
 
 TEST_DB_URL = "sqlite:///./test_widgets.db"
@@ -26,6 +28,7 @@ def _fresh_db_and_toggles():
     Base.metadata.create_all(bind=engine)
     reset_rate_limits()
     events_service.reset()
+    pow_service.reset()
     geo_service.FORCE_DOWN_A = False
     geo_service.FORCE_DOWN_B = False
     notify.FORCE_FAIL = False
@@ -71,3 +74,22 @@ def widget(client, tenant_and_key):
     )
     assert resp.status_code == 201
     return resp.json()
+
+
+def solve_pow_challenge(client, widget_id: str) -> dict:
+    """Fetches a real proof-of-work challenge and actually solves it — the
+    exact same brute-force algorithm the widget bundle runs client-side via
+    Web Crypto (see app/routers/public.py's _WIDGET_JS), just in Python.
+    Returns the two fields a submission payload needs to pass bot defense."""
+    resp = client.get(f"/widgets/{widget_id}/challenge")
+    assert resp.status_code == 200
+    challenge = resp.json()
+    salt = challenge["salt"]
+    prefix = "0" * challenge["difficulty"]
+    counter = 0
+    while True:
+        solution = str(counter)
+        digest = hashlib.sha256((salt + solution).encode()).hexdigest()
+        if digest.startswith(prefix):
+            return {"challenge_id": challenge["challenge_id"], "solution": solution}
+        counter += 1

@@ -30,6 +30,26 @@ export KEY=<the API key the seed step printed>
 export WID=<the signup-form widget id the seed step printed>
 ```
 
+And this shell function — solves a real proof-of-work challenge and prints
+`challenge_id:solution`, so any beat that needs a genuinely valid submission
+can do `POW=$(solve_pow $WID)` and split on `:`:
+```bash
+solve_pow() {
+  local widget_id=$1
+  local challenge=$(curl -s "http://localhost:8000/widgets/$widget_id/challenge")
+  python3 -c "
+import hashlib, json
+c = json.loads('''$challenge''')
+salt, difficulty = c['salt'], c['difficulty']
+prefix = '0' * difficulty
+i = 0
+while not hashlib.sha256((salt + str(i)).encode()).hexdigest().startswith(prefix):
+    i += 1
+print(c['challenge_id'] + ':' + str(i))
+"
+}
+```
+
 ---
 
 ## Beat 1 — Create a widget, show the snippet (≈45s)
@@ -52,16 +72,20 @@ going to `:8000` while the page itself came from `:5500`.
 
 ## Beat 3 — Submit, show it land in the dashboard (≈45s)
 
-Fill the visible form on the test-site page and submit, or:
+Fill the visible form on the test-site page and submit (this now includes a
+proof-of-work solve happening invisibly in the background — watch the button
+briefly show "Verifying…"), or from the command line:
 ```bash
+POW=$(solve_pow $WID); CID=${POW%%:*}; SOL=${POW##*:}
+
 curl -s -X POST http://localhost:8000/submissions -H "Content-Type: application/json" \
-  -d "{\"widget_id\":\"$WID\",\"data\":{\"email\":\"visitor@example.com\"}}"
+  -d "{\"widget_id\":\"$WID\",\"data\":{\"email\":\"visitor@example.com\"},\"challenge_id\":\"$CID\",\"solution\":\"$SOL\"}"
 
 curl -s http://localhost:8000/api/dashboard/widgets/$WID/stats -H "X-API-Key: $KEY" \
   | python3 -m json.tool
 ```
 
-## Beat 4 — Attack yourself (≈60s)
+## Beat 4 — Attack yourself (≈75s)
 
 ```bash
 # invalid payload -> clean 4xx, not a 500
@@ -73,12 +97,28 @@ curl -s -D - -o /dev/null http://localhost:8000/submissions -X OPTIONS \
   -H "Origin: http://evil.example" -H "Access-Control-Request-Method: POST" \
   | grep -i "access-control-allow-origin\|HTTP/1.1"
 
-# burst -> 429 mid-way through
+# naive bot -> no challenge at all -> rejected before it ever reaches storage
+curl -s -o /dev/null -w "naive bot (no challenge): %{http_code}\n" -X POST http://localhost:8000/submissions \
+  -H "Content-Type: application/json" -d "{\"widget_id\":\"$WID\",\"data\":{\"email\":\"bot@example.com\"}}"
+
+# scripted bot -> fetched config but guessed instead of solving -> still rejected
+curl -s -o /dev/null -w "scripted bot (unsolved): %{http_code}\n" -X POST http://localhost:8000/submissions \
+  -H "Content-Type: application/json" \
+  -d "{\"widget_id\":\"$WID\",\"data\":{\"email\":\"bot@example.com\"},\"challenge_id\":\"guessed\",\"solution\":\"0\"}"
+
+# burst -> 429 mid-way through (dummy-but-well-formed challenge fields, since
+# rate limiting runs before challenge verification — no need for 22 real solves)
 for i in $(seq 1 22); do
   curl -s -o /dev/null -w "%{http_code} " -X POST http://localhost:8000/submissions \
-    -H "Content-Type: application/json" -d "{\"widget_id\":\"$WID\",\"data\":{\"email\":\"burst$i@example.com\"}}"
+    -H "Content-Type: application/json" \
+    -d "{\"widget_id\":\"$WID\",\"data\":{\"email\":\"burst$i@example.com\"},\"challenge_id\":\"burst\",\"solution\":\"0\"}"
 done; echo
 ```
+
+Say the line for this beat: **"a bot can't buy its way past this without
+implementing real proof-of-work — and even then, it's rate-limited."** See
+`scripts/measure_bot_defense.py` and `EVIDENCE.md` for the actual measured
+numbers (0% naive/scripted bot success, 0% false positives on real traffic).
 
 **Immediately after this beat**, reset so the burst doesn't bleed into the
 next two beats:
@@ -91,9 +131,10 @@ curl -s -X POST http://localhost:8000/demo/reset
 ```bash
 curl -s -X POST http://localhost:8000/demo/geo-provider-a/down
 
+POW=$(solve_pow $WID); CID=${POW%%:*}; SOL=${POW##*:}
 curl -s -X POST http://localhost:8000/submissions -H "Content-Type: application/json" \
   -H "X-Forwarded-For: 8.8.8.8" \
-  -d "{\"widget_id\":\"$WID\",\"data\":{\"email\":\"fallback-demo@example.com\"}}" \
+  -d "{\"widget_id\":\"$WID\",\"data\":{\"email\":\"fallback-demo@example.com\"},\"challenge_id\":\"$CID\",\"solution\":\"$SOL\"}" \
   | python3 -m json.tool
 ```
 Point at `geo_country`/`geo_city` in the response — provider A is forced down,
@@ -114,8 +155,10 @@ curl -s -X POST http://localhost:8000/demo/reset
 ```bash
 curl -s -X POST http://localhost:8000/demo/email-side-effect/failing
 
+POW=$(solve_pow $WID); CID=${POW%%:*}; SOL=${POW##*:}
 curl -s -o /dev/null -w "status: %{http_code}\n" -X POST http://localhost:8000/submissions \
-  -H "Content-Type: application/json" -d "{\"widget_id\":\"$WID\",\"data\":{\"email\":\"sideeffect-demo@example.com\"}}"
+  -H "Content-Type: application/json" \
+  -d "{\"widget_id\":\"$WID\",\"data\":{\"email\":\"sideeffect-demo@example.com\"},\"challenge_id\":\"$CID\",\"solution\":\"$SOL\"}"
 
 curl -s -X POST http://localhost:8000/demo/reset
 ```

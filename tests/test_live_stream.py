@@ -15,6 +15,7 @@ that transcript.
 import asyncio
 
 from app.services import events as events_service
+from conftest import solve_pow_challenge
 
 # --- Unit tests: the broker itself ------------------------------------------
 
@@ -90,7 +91,12 @@ def test_valid_submission_publishes_event(client, widget, monkeypatch):
 
     resp = client.post(
         "/submissions",
-        json={"widget_id": widget["id"], "data": {"email": "wired@example.com"}, "website": ""},
+        json={
+            "widget_id": widget["id"],
+            "data": {"email": "wired@example.com"},
+            "website": "",
+            **solve_pow_challenge(client, widget["id"]),
+        },
     )
     assert resp.status_code == 201
     assert published["widget_id"] == widget["id"]
@@ -112,6 +118,7 @@ def test_spam_submission_does_not_publish_event(client, widget, monkeypatch):
             "widget_id": widget["id"],
             "data": {"email": "bot@example.com"},
             "website": "http://spam.example",
+            **solve_pow_challenge(client, widget["id"]),
         },
     )
     assert resp.status_code == 201
@@ -129,6 +136,11 @@ def test_publish_failure_does_not_break_the_submission(client, widget, monkeypat
 
     resp = client.post(
         "/submissions",
-        json={"widget_id": widget["id"], "data": {"email": "resilient@example.com"}, "website": ""},
+        json={
+            "widget_id": widget["id"],
+            "data": {"email": "resilient@example.com"},
+            "website": "",
+            **solve_pow_challenge(client, widget["id"]),
+        },
     )
     assert resp.status_code == 201

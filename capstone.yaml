@@ -6,6 +6,7 @@ endpoints:
   - POST /api/widgets
   - GET /api/widgets
   - GET /widgets/{id}/config
+  - GET /widgets/{id}/challenge
   - GET /widget/{version}.js
   - POST /submissions
   - GET /api/dashboard/widgets/{id}/stats

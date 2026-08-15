@@ -4,6 +4,8 @@ widgets or submissions — the isolation guarantee §6/§7 of the brief calls ou
 by name, and the one gap Phase 2's EVIDENCE.md left open.
 """
 
+from conftest import solve_pow_challenge
+
 
 def _signup_and_widget(client, email):
     signup = client.post("/api/auth/signup", json={"email": email, "password": "password123"})
@@ -70,9 +72,15 @@ def test_dashboard_stats_and_submissions_scoped_per_tenant(client):
     key_b, widget_b_id = _signup_and_widget(client, "b5@example.com")
 
     # A visitor submits to B's widget.
+    pow_fields = solve_pow_challenge(client, widget_b_id)
     client.post(
         "/submissions",
-        json={"widget_id": widget_b_id, "data": {"email": "visitor@example.com"}, "website": ""},
+        json={
+            "widget_id": widget_b_id,
+            "data": {"email": "visitor@example.com"},
+            "website": "",
+            **pow_fields,
+        },
     )
 
     # Tenant A can't see B's submissions or stats through B's widget id.

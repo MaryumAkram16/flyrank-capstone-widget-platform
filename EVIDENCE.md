@@ -205,3 +205,51 @@ bug — real browsers and curl stream incrementally over a real socket and
 don't hit it, which is exactly what the two-process proof above demonstrates.
 
 Suite now 41/41.
+
+## Stretch — bot defense (proof-of-work) with measured spam reduction
+
+§9: "Bot defense: proof-of-work or CAPTCHA challenge — and measure the spam
+reduction." Proof-of-work chosen over CAPTCHA: genuinely $0/no third-party
+account (§10's iron rule), no external service dependency.
+
+How it works: `GET /widgets/{id}/challenge` issues a random salt + difficulty;
+the submission must include a `solution` such that
+`sha256(salt + solution)` starts with `difficulty` zero hex characters. A
+real browser solves this in milliseconds via Web Crypto (`app/routers/public.py`'s
+widget bundle); a script bot that just POSTs to `/submissions` directly has
+no solution at all. Challenges are single-use and widget-scoped — reusing a
+solved challenge, or using one solved for a different widget, is rejected.
+
+**Measured, live, against a real running server** (`scripts/measure_bot_defense.py`,
+20 attempts per profile):
+```
+Naive bot                0/20 succeeded  (20/20 blocked, 100% block rate)  [0.04s]
+Scripted attacker        0/20 succeeded  (20/20 blocked, 100% block rate)  [0.06s]
+Legitimate visitor      20/20 succeeded  (0/20 blocked, 0% block rate)  [2.34s]
+```
+- "Naive bot" = the pre-feature threat model: a raw POST with no challenge
+  at all. 100% blocked (400, missing required fields).
+- "Scripted attacker" = fetched real config but guessed at a challenge_id
+  instead of solving one. 100% blocked (403, `bot_challenge_failed`).
+- "Legitimate visitor" = solves the real challenge, same algorithm the
+  widget bundle runs client-side. 0% false-positive rate — every real
+  submission succeeds. ~117ms average solve cost per submission at the
+  default difficulty (4 leading zero hex chars, ~65k average SHA-256 tries)
+  — an imperceptible one-time cost for a real visitor, and the actual
+  "friction" that makes bulk bot submission economically unattractive.
+
+Unit/integration tested in `tests/test_submissions.py`: challenge issuance
+returns salt+difficulty and a `no-store` cache header (`test_challenge_endpoint_returns_salt_and_difficulty`),
+404 for an unknown widget, an unsolved/wrong-solution submission is rejected
+with 403 (`test_submission_without_solving_challenge_is_rejected`), a
+challenge can't be replayed (`test_challenge_is_single_use`), and a challenge
+solved for one widget can't be used to submit to another
+(`test_challenge_from_a_different_widget_is_rejected`).
+
+Suite now 47/47 — every existing test that submits was updated to solve a
+real challenge first (via a new `solve_pow_challenge()` test helper in
+`conftest.py` that runs the identical brute-force algorithm as the browser
+JS, in Python), rather than adding a bypass for tests. The burst/rate-limit
+test uses a structurally-valid-but-wrong challenge deliberately, since rate
+limiting runs before challenge verification in the pipeline and the test
+doesn't need 25 real solves to prove its point.
