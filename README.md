@@ -25,7 +25,8 @@ Full design rationale: see [`DESIGN.md`](./DESIGN.md).
       `EVIDENCE.md`): naive bots 100% blocked, legitimate visitors 0% false
       positives, ~117ms average solve cost per real submission
 
-Suite is at 47/47 (`pytest -q`).
+Suite is at 47/47 (`pytest -q`), and GitHub Actions runs it on every push and pull request
+([`.github/workflows/tests.yml`](.github/workflows/tests.yml)).
 
 ## Architecture
 
